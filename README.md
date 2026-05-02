@@ -41,12 +41,15 @@ pip install opencv-python numpy
 ## 🚀 Cara Penggunaan
 
 ### 1. Mode Interaktif (Sangat Mudah!)
+
 Cukup jalankan file *script* tanpa argumen apa pun. Program akan memandu Anda langkah demi langkah:
+
 ```bash
 python ASCII_v4_ultimate.py
 ```
 
 ### 2. Mode Command-Line (Cepat & Langsung)
+
 Bagi pengguna *power user*, Anda bisa mengeksekusinya dalam satu baris perintah:
 
 ```bash
@@ -62,18 +65,18 @@ python ASCII_v4_ultimate.py my_video.mp4 --color --skip 2 --loop
 
 ### Daftar Argumen Lengkap
 
-| Argumen | Tipe | Deskripsi |
-| :--- | :--- | :--- |
-| `video_path` | `String` | Path file video yang ingin diputar. |
-| `--color` | `Flag` | Mengaktifkan rendering warna via *ANSI Escape Code*. |
-| `--width` | `Integer`| Menentukan jumlah kolom karakter ASCII (default: menyesuaikan lebar terminal). |
-| `--skip` | `Integer`| Melompati beberapa frame (contoh: `--skip 2` untuk melompati tiap frame genap). |
-| `--loop` | `Flag` | Memutar ulang video secara otomatis saat sudah selesai. |
-| `--info` | `Flag` | Hanya menampilkan info resolusi, FPS, dan durasi video tanpa memutarnya. |
+| Argumen        | Tipe        | Deskripsi                                                                        |
+| :------------- | :---------- | :------------------------------------------------------------------------------- |
+| `video_path` | `String`  | Path file video yang ingin diputar.                                              |
+| `--color`    | `Flag`    | Mengaktifkan rendering warna via*ANSI Escape Code*.                            |
+| `--width`    | `Integer` | Menentukan jumlah kolom karakter ASCII (default: menyesuaikan lebar terminal).   |
+| `--skip`     | `Integer` | Melompati beberapa frame (contoh:`--skip 2` untuk melompati tiap frame genap). |
+| `--loop`     | `Flag`    | Memutar ulang video secara otomatis saat sudah selesai.                          |
+| `--info`     | `Flag`    | Hanya menampilkan info resolusi, FPS, dan durasi video tanpa memutarnya.         |
 
 ---
 
-## ⌨️ Kontrol Saat Bermain
+## ⌨️ Kontrol
 
 - Tekan `Ctrl + C` kapan saja untuk menghentikan (*Graceful Shutdown*) dan mengembalikan *cursor* terminal Anda seperti semula.
 
