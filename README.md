@@ -84,7 +84,3 @@ python ASCII_v4_ultimate.py my_video.mp4 --color --skip 2 --loop
 1. **Gunakan Terminal Modern:** Gunakan Windows Terminal, iTerm2, atau Alacritty untuk pengalaman rendering warna yang mulus. *Command Prompt (CMD)* klasik mungkin terasa lebih berat.
 2. **Perkecil Font:** Jika gambar terlihat terpotong, perkecil ukuran *font* terminal Anda (`Ctrl` + `-` atau `Ctrl` + *Scroll Down*) agar lebih banyak karakter bisa ditampung.
 3. **Hitam-Putih Lebih Cepat:** Rendering warna menambah beban komputasi. Matikan argumen `--color` jika PC mulai *lag* pada video beresolusi tinggi.
-
----
-
-*Dibuat dengan ❤️ dan `print()`*
