@@ -1,89 +1,238 @@
-# 🎬 ASCII Video Player v4 — Ultimate Edition
+# 🎬🌇 Media-to-ASCII Translator/Handler (fork of "ASCII Video Player v4 — Ultimate Edition")
 
+![Java](https://img.shields.io/badge/java-23.0.2+-gold.svg)
+![Java](https://img.shields.io/badge/javac-23.0.2+-gold.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.x-green.svg)
 ![NumPy](https://img.shields.io/badge/NumPy-1.20+-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-**ASCII Video Player v4** adalah pemutar video berbasis teks (Command-Line Interface) yang merender setiap *frame* video menjadi seni ASCII yang memukau langsung di dalam terminal Anda. Versi Ultimate ini mendukung *rendering* hitam-putih super cepat maupun *full-color* dengan performa pemrosesan *thread* terpisah!
+Русский | [English README](README-EN.md)
 
----
+Локальный форк Media-to-ASCII Translator/Handler на базе публичного репозитория
+[stepanussaruran/ASCII-Video-Player](https://github.com/stepanussaruran/ASCII-Video-Player).
 
-## ✨ Fitur Utama
+Оригинальный проект **ASCII Video Player v4** умеет воспроизводить видео в виде ASCII-анимации прямо на базе CLI, который преобразует каждый кадр видео в терминальное отображение видео. Та версия поддерживает как сверхбыстрый чёрно-белый рендеринг, так и полноцветный режим, используя отдельный поток обработки для лучшей производительности.
 
-- **🌈 Mode Berwarna / Hitam Putih (`--color` / `--no-color`)**
-  Pilih antara performa tinggi (Hitam-Putih) atau estetika visual (Berwarna).
-- **🕹️ Interactive Mode & CLI Mode**
-  Jalankan tanpa argumen untuk masuk ke mode interaktif yang ramah pengguna, atau gunakan langsung via *command-line* untuk integrasi otomatisasi.
-- **⚡ Background Decoding Thread**
-  Decoder video berjalan di *thread* terpisah secara *real-time* memastikan *playback* ASCII selancar mungkin tanpa *stuttering*.
-- **📏 Kustomisasi Resolusi (`--width`)**
-  Atur kelebaran karakter ASCII sesuka hati. Secara otomatis mendeteksi ukuran terminal Anda untuk *fallback*.
-- **⏭️ Frame Skipping (`--skip`)**
-  Menyediakan opsi untuk melompati *frame* jika terminal tidak sanggup me-*render* video dengan FPS tinggi.
-- **🔄 Auto Loop (`--loop`)**
-  Mainkan video secara berulang-ulang tiada henti.
-- **ℹ️ Video Information (`--info`)**
-  Intip informasi metadata dari file video Anda tanpa memutarnya.
+Этот же форк добавляет (и слегка переосмысляет) отдельный слой инструментов. Самое важное — отступление от CLI-подхода к графическому интерфейсу на базе Java Swing API.
 
----
+Форк умеет проводить:
 
-## 🛠️ Persyaratan Sistem
+- конвертацию фотографий в ASCII;
+- сохранение ASCII-фото как `.png` и `.txt`;
+- сохранение ASCII-видео как `.mp4`;
+- цветной ANSI-вывод;
+- усиление яркости, контраста, насыщенности и glow-эффект;
+- простую Java Swing-обёртку с кнопками, логом, прогресс-баром и остановкой обработки.
 
-Sebelum menjalankan program ini, pastikan Anda telah menginstal pustaka yang dibutuhkan:
+Проект был спланирован и направлен владельцем репозитория, а реализован при помощи OpenAI Codex. Человеческая проверка, решения о публикации и ответственность за репозиторий остаются за владельцем репозитория.
 
-```bash
-pip install opencv-python numpy
+## Структура форка
+
+```text
+fork/
+  ascii_media_tools.py           # основной Python-инструмент для фото/видео
+  requirements.txt               # Python-зависимости
+  run_color_preview.ps1          # цветной предпросмотр в PowerShell
+  LICENSE.md                     # MIT License для GitHub-распознавания
+  README.md                      # README на русском языке
+  README-EN.md                   # README на английском языке
+  licences/
+    LICENSE-EN.md                # MIT License на английском языке
+    LICENSE-RU.md                # русский перевод лицензии
+    NOTICE-EN.md                 # атрибуция и этическое уведомление на английском
+    NOTICE-RU.md                 # атрибуция и этическое уведомление на русском
+  java-swing/
+    src/AsciiPhotoSwingApp.java  # Swing GUI
+    build.ps1                    # сборка JAR
+    run_gui.bat                  # запуск GUI двойным кликом на Windows
+    run_gui.ps1                  # запуск GUI через PowerShell
+    dist/AsciiPhotoSwingApp.jar  # собранный GUI
 ```
 
----
+## Требования
 
-## 🚀 Cara Penggunaan
-
-### 1. Mode Interaktif (Sangat Mudah!)
-
-Cukup jalankan file *script* tanpa argumen apa pun. Program akan memandu Anda langkah demi langkah:
+Для Python-инструментов:
 
 ```bash
-python ASCII_v4_ultimate.py
+python -m pip install -r requirements.txt
 ```
 
-### 2. Mode Command-Line (Cepat & Langsung)
+Зависимости:
 
-Bagi pengguna *power user*, Anda bisa mengeksekusinya dalam satu baris perintah:
+- `opencv-python` - чтение и запись видео;
+- `numpy` - обработка пикселей;
+- `pillow` - чтение изображений и рендер ASCII-картинок.
 
-```bash
-# Memutar video dengan warna (lebar otomatis menyesuaikan terminal)
-python ASCII_v4_ultimate.py my_video.mp4 --color
+Для GUI:
 
-# Memutar video hitam putih dengan lebar 150 karakter
-python ASCII_v4_ultimate.py my_video.mp4 --width 150
+- Java Runtime для запуска;
+- JDK для пересборки `AsciiPhotoSwingApp.jar`;
+- Python с зависимостями выше, потому что GUI вызывает `ascii_media_tools.py`.
 
-# Memutar video berwarna, skip setiap 2 frame agar lebih ringan, dan loop terus menerus
-python ASCII_v4_ultimate.py my_video.mp4 --color --skip 2 --loop
+## Быстрый старт: фото
+
+Перейди в папку склонированного форка:
+
+```powershell
+cd "C:\<PATH WHERE WAS IT CLONED>\fork"
 ```
 
-### Daftar Argumen Lengkap
+Показать фотографию цветным ASCII в терминале:
 
-| Argumen        | Tipe        | Deskripsi                                                                        |
-| :------------- | :---------- | :------------------------------------------------------------------------------- |
-| `video_path` | `String`  | Path file video yang ingin diputar.                                              |
-| `--color`    | `Flag`    | Mengaktifkan rendering warna via*ANSI Escape Code*.                            |
-| `--width`    | `Integer` | Menentukan jumlah kolom karakter ASCII (default: menyesuaikan lebar terminal).   |
-| `--skip`     | `Integer` | Melompati beberapa frame (contoh:`--skip 2` untuk melompati tiap frame genap). |
-| `--loop`     | `Flag`    | Memutar ulang video secara otomatis saat sudah selesai.                          |
-| `--info`     | `Flag`    | Hanya menampilkan info resolusi, FPS, dan durasi video tanpa memutarnya.         |
+```powershell
+python ascii_media_tools.py image "C:\<PATH TO YOUR PHOTO>\photo.jpg" --width 120 --color --print
+```
 
----
+Сохранить цветную ASCII-картинку:
 
-## ⌨️ Kontrol
+```powershell
+python ascii_media_tools.py image "C:\<PATH TO YOUR PHOTO>\photo.jpg" --width 160 --color --vivid --save-image "ascii_outputs\photo_ascii.png"
+```
 
-- Tekan `Ctrl + C` kapan saja untuk menghentikan (*Graceful Shutdown*) dan mengembalikan *cursor* terminal Anda seperti semula.
+Сохранить ASCII-текст:
 
----
+```powershell
+python ascii_media_tools.py image "C:\<PATH TO YOUR PHOTO>\photo.jpg" --width 160 --save-text "ascii_outputs\photo_ascii.txt"
+```
 
-## 💡 Tips Performa
+Сохранить в исходном пиксельном размере:
 
-1. **Gunakan Terminal Modern:** Gunakan Windows Terminal, iTerm2, atau Alacritty untuk pengalaman rendering warna yang mulus. *Command Prompt (CMD)* klasik mungkin terasa lebih berat.
-2. **Perkecil Font:** Jika gambar terlihat terpotong, perkecil ukuran *font* terminal Anda (`Ctrl` + `-` atau `Ctrl` + *Scroll Down*) agar lebih banyak karakter bisa ditampung.
-3. **Hitam-Putih Lebih Cepat:** Rendering warna menambah beban komputasi. Matikan argumen `--color` jika PC mulai *lag* pada video beresolusi tinggi.
+```powershell
+python ascii_media_tools.py image "C:\<PATH TO YOUR PHOTO>\photo.jpg" --width 240 --color --vivid --output-size 1920x1080 --save-image "ascii_outputs\photo_ascii_1920x1080.png"
+```
+
+## Быстрый старт: видео
+
+Предпросмотр цветного ASCII-видео в терминале:
+
+```powershell
+python ascii_media_tools.py video "C:\<PATH TO YOUR VIDEO>\video.mp4" --width 100 --color --preview
+```
+
+Сохранить цветное ASCII-видео:
+
+```powershell
+python ascii_media_tools.py video "C:\<PATH TO YOUR VIDEO>\video.mp4" --width 120 --color --vivid --save-video "ascii_outputs\video_ascii.mp4"
+```
+
+Сохранить быстрее, пропуская кадры:
+
+```powershell
+python ascii_media_tools.py video "C:\<PATH TO YOUR VIDEO>\video.mp4" --width 120 --color --vivid --skip 3 --save-video "ascii_outputs\video_fast.mp4"
+```
+
+Сохранить с прогрессом для GUI/логов:
+
+```powershell
+python ascii_media_tools.py video "C:\<PATH TO YOUR VIDEO>\video.mp4" --width 120 --color --vivid --progress --save-video "ascii_outputs\video_ascii.mp4"
+```
+
+## Основные параметры
+
+| Параметр | Для чего нужен |
+| :-- | :-- |
+| `image` / `video` | режим обработки фото или видео |
+| `--width` | ширина ASCII-сетки в символах |
+| `--height` | высота ASCII-сетки в строках |
+| `--color` | цветной ANSI/рендер |
+| `--vivid` | быстрый пресет яркости, контраста и насыщенности |
+| `--brightness` | множитель яркости |
+| `--contrast` | множитель контраста |
+| `--saturation` | множитель насыщенности |
+| `--gamma` | осветление/затемнение средних тонов |
+| `--glow` | мягкое свечение для сохранённых PNG/MP4 |
+| `--output-size WIDTHxHEIGHT` | итоговый размер PNG/MP4 в пикселях |
+| `--save-image` | сохранить PNG |
+| `--save-video` | сохранить MP4 |
+| `--save-text` | сохранить ASCII-текст |
+| `--save-frames` | сохранить видео как набор текстовых кадров |
+| `--skip` | обрабатывать каждый N-й кадр видео |
+| `--max-frames` | ограничить число кадров для теста |
+| `--progress` | печатать строки прогресса `PROGRESS current total percent` |
+
+## Java Swing GUI
+
+GUI находится в `java-swing/`.
+
+Запуск двойным кликом на Windows:
+
+```text
+java-swing\run_gui.bat
+```
+
+Запуск через PowerShell:
+
+```powershell
+cd "C:\<PATH WHERE WAS IT CLONED>\fork\java-swing"
+.\run_gui.ps1
+```
+
+Сборка JAR:
+
+```powershell
+cd "C:\<PATH WHERE WAS IT CLONED>\fork\java-swing"
+.\build.ps1
+```
+
+В GUI есть:
+
+- выбор фото или видео;
+- обычная обработка;
+- обработка по натуральному пиксельному размеру;
+- поле ширины ASCII;
+- прогресс-бар;
+- лог;
+- кнопка остановки текущей обработки.
+
+Использование графического интерфейса довольно интуитивно и понятно.
+
+## Про натуральный размер
+
+Натуральный размер означает размер итогового PNG/MP4 в пикселях, например `1920x1080`.
+
+Это не значит “один ASCII-символ на один пиксель”. Детализация ASCII по-прежнему задаётся через `--width`.
+Такой подход сохраняет оригинальный размер файла, но не превращает рендер в слишком тяжёлую сетку из тысяч символов.
+
+## Цветной вывод
+
+Цвет в терминале работает через ANSI 24-bit escape codes.
+
+Лучше всего использовать:
+
+- Windows Terminal;
+- PowerShell 7;
+- терминал VS Code;
+- iTerm2 / Alacritty / современные Linux-терминалы.
+
+Старые консоли могут показывать escape-коды текстом или тормозить.
+
+## Упаковка и платформы
+
+Python-часть почти кроссплатформенная: Windows, Linux, macOS при наличии Python и зависимостей.
+
+Java Swing GUI тоже переносимый как Java-приложение, но текущие launchers `run_gui.bat` и `run_gui.ps1` ориентированы на Windows/PowerShell.
+
+`jpackage` может собрать приложение с Java runtime, но он не упаковывает Python и OpenCV/Pillow. Для полностью standalone-версии нужен отдельный шаг упаковки Python-runtime.
+
+## Лицензия
+
+Этот репозиторий использует MIT License для кода и документации fork-слоя.
+
+Корневой [`LICENSE.md`](LICENSE.md) добавлен для стандартного GitHub-распознавания лицензии.
+Дополнительные bilingual-файлы лицензии и уведомления об атрибуции лежат в [`licences/`](licences/):
+
+- [`LICENSE-EN.md`](licences/LICENSE-EN.md) - MIT License на английском;
+- [`LICENSE-RU.md`](licences/LICENSE-RU.md) - русский перевод лицензии;
+- [`NOTICE-EN.md`](licences/NOTICE-EN.md) - атрибуция и этическое уведомление на английском;
+- [`NOTICE-RU.md`](licences/NOTICE-RU.md) - атрибуция и этическое уведомление на русском.
+
+Лицензия применяется к коду и документации, созданным именно для этого fork-слоя. Она не перелицензирует оригинальный upstream-проект и сторонние зависимости.
+
+## Благодарности
+
+На просторах TikTok автор заметил привлекательную идею терминального просмотра видео в ASCII. За оригинальную идею и базовый видеоплеер отдельная благодарность:
+
+[stepanussaruran/ASCII-Video-Player](https://github.com/stepanussaruran/ASCII-Video-Player)
+
+Этот форк сохраняет связь с оригиналом, но добавляет отдельный слой для фото, сохранения результатов и GUI (+ отходит от CLI-подхода).
