@@ -28,6 +28,12 @@ ASCII_CHARS = (
 )
 _CHARS_ARRAY = np.array(list(ASCII_CHARS))
 
+DEFAULT_BRIGHTNESS = 1.12
+DEFAULT_CONTRAST = 1.25
+DEFAULT_SATURATION = 1.35
+DEFAULT_GAMMA = 1.12
+DEFAULT_GLOW = 0.6
+
 CURSOR_HOME = "\033[H"
 CLEAR_SCREEN = "\033[2J"
 HIDE_CURSOR = "\033[?25l"
@@ -157,7 +163,7 @@ def render_ascii_image(
     font_path: str | None = None,
     thickness: int = 1,
     background: tuple[int, int, int] = (0, 0, 0),
-    foreground: tuple[int, int, int] = (235, 235, 235),
+    foreground: tuple[int, int, int] = (255, 255, 255),
     output_size: tuple[int, int] | None = None,
     glow: float = 0.0,
 ) -> Image.Image:
@@ -460,26 +466,26 @@ def add_common_ascii_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--brightness",
         type=float,
-        default=1.0,
-        help="Brightness multiplier before ASCII conversion. Use 1.1-1.4 for brighter output.",
+        default=DEFAULT_BRIGHTNESS,
+        help=f"Brightness multiplier before ASCII conversion. Default: {DEFAULT_BRIGHTNESS}.",
     )
     parser.add_argument(
         "--contrast",
         type=float,
-        default=1.0,
-        help="Contrast multiplier before ASCII conversion. Use 1.2-1.8 for punchier output.",
+        default=DEFAULT_CONTRAST,
+        help=f"Contrast multiplier before ASCII conversion. Default: {DEFAULT_CONTRAST}.",
     )
     parser.add_argument(
         "--saturation",
         type=float,
-        default=1.0,
-        help="Color saturation multiplier. Use 1.4-2.4 for vivid color ASCII.",
+        default=DEFAULT_SATURATION,
+        help=f"Color saturation multiplier. Default: {DEFAULT_SATURATION}.",
     )
     parser.add_argument(
         "--gamma",
         type=float,
-        default=1.0,
-        help="Gamma correction. Values above 1 brighten midtones; try 1.15-1.45.",
+        default=DEFAULT_GAMMA,
+        help=f"Gamma correction. Values above 1 brighten midtones. Default: {DEFAULT_GAMMA}.",
     )
     parser.add_argument(
         "--vivid",
@@ -506,7 +512,12 @@ def add_render_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--font-size", type=int, default=10, help="Rendered text font size in pixels.")
     parser.add_argument("--font-path", default=None, help="Optional path to a monospace .ttf/.ttc font.")
     parser.add_argument("--thickness", type=int, default=1, help="Rendered text stroke thickness.")
-    parser.add_argument("--glow", type=float, default=0.0, help="Soft glow radius for saved PNG/MP4 output.")
+    parser.add_argument(
+        "--glow",
+        type=float,
+        default=DEFAULT_GLOW,
+        help=f"Soft glow radius for saved PNG/MP4 output. Default: {DEFAULT_GLOW}.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:

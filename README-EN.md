@@ -29,8 +29,8 @@ The fork can:
 - save ASCII videos as `.mp4`;
 - print colored ANSI output in compatible terminals;
 - boost brightness, contrast, saturation, and add a glow effect;
-- run through a simple Java Swing window with file selection, logs, a progress
-  bar, and a stop button.
+- run through a simple English Java Swing window with file selection, logs, a
+  progress bar, and a stop button.
 
 This project was planned and directed by the maintainer and implemented with
 assistance from OpenAI Codex. Human review, publication choices, and project
@@ -39,7 +39,7 @@ responsibility remain with the repository maintainer.
 ## Fork Structure
 
 ```text
-.
+fork/
   ascii_media_tools.py           # main Python tool for photos/videos
   requirements.txt               # Python dependencies
   run_color_preview.ps1          # colored PowerShell preview helper
@@ -79,6 +79,29 @@ For the GUI:
 - JDK for rebuilding `AsciiPhotoSwingApp.jar`;
 - Python with the dependencies above, because the GUI calls
   `ascii_media_tools.py` under the hood.
+
+## Supported Formats
+
+Format support ultimately depends on Pillow and OpenCV, but the fork's GUI and
+media detector explicitly allow:
+
+| Type | Extensions | Used by |
+| :-- | :-- | :-- |
+| Images | `.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`, `.tif`, `.tiff` | CLI `image`, Java Swing GUI |
+| Videos | `.mp4`, `.avi`, `.mkv`, `.mov`, `.webm` | CLI `video`, Java Swing GUI |
+
+Saved outputs:
+
+| Output | Format |
+| :-- | :-- |
+| ASCII photo as rendered image | `.png` |
+| ASCII photo as text | `.txt` |
+| ASCII video | `.mp4` |
+| ASCII video frames | a folder of `.txt` files |
+
+If a file has a rare extension but Pillow/OpenCV can read it, the CLI may still
+work when called directly. The GUI keeps the allowed list short and predictable
+on purpose.
 
 ## Quick Start: Photos
 
@@ -146,12 +169,12 @@ python ascii_media_tools.py video "C:\<PATH TO YOUR VIDEO>\video.mp4" --width 12
 | `--width` | ASCII grid width in characters |
 | `--height` | ASCII grid height in rows |
 | `--color` | colored ANSI/rendered output |
-| `--vivid` | quick brightness, contrast, and saturation preset |
-| `--brightness` | brightness multiplier |
-| `--contrast` | contrast multiplier |
-| `--saturation` | saturation multiplier |
-| `--gamma` | midtone brightening/darkening |
-| `--glow` | soft glow for saved PNG/MP4 outputs |
+| `--vivid` | stronger brightness, contrast, and saturation preset on top of bright defaults |
+| `--brightness` | brightness multiplier, default `1.12` |
+| `--contrast` | contrast multiplier, default `1.25` |
+| `--saturation` | saturation multiplier, default `1.35` |
+| `--gamma` | midtone brightening/darkening, default `1.12` |
+| `--glow` | soft glow for saved PNG/MP4 outputs, default `0.6` |
 | `--output-size WIDTHxHEIGHT` | final PNG/MP4 pixel size |
 | `--save-image` | save PNG |
 | `--save-video` | save MP4 |
@@ -188,12 +211,15 @@ cd "C:\<PATH WHERE IT WAS CLONED>\fork\java-swing"
 The GUI includes:
 
 - photo or video file selection;
-- normal processing;
-- natural pixel-size processing;
+- `Forge by width` processing through the selected ASCII width;
+- `Forge at native size` processing through the source pixel dimensions;
 - editable ASCII width;
 - progress bar;
 - log area;
-- stop button for the active conversion process.
+- `Stop the forge` button for the active conversion process.
+
+The interface stays intentionally simple: choose the media victim through the
+`...` button, set `ASCII width`, then send the file into the forge.
 
 ## Natural Size
 
