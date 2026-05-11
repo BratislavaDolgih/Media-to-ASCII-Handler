@@ -30,7 +30,7 @@
 ## Структура форка
 
 ```text
-fork/
+.
   ascii_media_tools.py           # основной Python-инструмент для фото/видео
   requirements.txt               # Python-зависимости
   run_color_preview.ps1          # цветной предпросмотр в PowerShell
