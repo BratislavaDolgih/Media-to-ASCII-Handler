@@ -39,7 +39,7 @@ responsibility remain with the repository maintainer.
 ## Fork Structure
 
 ```text
-fork/
+.
   ascii_media_tools.py           # main Python tool for photos/videos
   requirements.txt               # Python dependencies
   run_color_preview.ps1          # colored PowerShell preview helper
