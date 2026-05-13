@@ -25,7 +25,7 @@ image/video conversion and a simple Java Swing GUI wrapper.
 The fork can:
 
 - convert photos into ASCII;
-- save ASCII photos as `.png` (as `.txt` - in development);
+- save ASCII photos as `.png` and `.txt`;
 - save ASCII videos as `.mp4`;
 - print colored ANSI output in compatible terminals;
 - boost brightness, contrast, saturation, and add a glow effect;
