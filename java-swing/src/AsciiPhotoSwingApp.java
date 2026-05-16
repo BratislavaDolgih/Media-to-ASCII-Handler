@@ -35,6 +35,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import supported.ImageExtensionsConstants;
+import supported.VideoExtensionsConstants;
 
 /**
  * The main and, for now, only class of the graphical application.
@@ -94,6 +98,9 @@ public class AsciiPhotoSwingApp extends JFrame {
     /** Starts conversion using the configured ASCII width. */
     private final JButton processButton = new JButton("Forge by width");
 
+    /** Starts batch conversion for a selected directory of supported images. */
+    private final JButton processFolderButton = new JButton("Forge selected directory at native sizes");
+
     /** Starts conversion and asks Python to render into the source pixel size. */
     private final JButton naturalSizeButton = new JButton("Forge at native size");
 
@@ -108,7 +115,6 @@ public class AsciiPhotoSwingApp extends JFrame {
 
     /** The photo or video chosen by the user. */
     private File selectedFile;
-
 
     // -------------------------------------------------------------
     /*
@@ -182,6 +188,7 @@ public class AsciiPhotoSwingApp extends JFrame {
 
         processButton.addActionListener(event -> processMedia(processButton, false));
         naturalSizeButton.addActionListener(event -> processMedia(naturalSizeButton, true));
+        processFolderButton.addActionListener(event -> chooseFolder().ifPresent(this::processCurrentFolder));
 
         JPanel filePanel = new JPanel(new BorderLayout(8, 0));
         filePanel.add(selectedFileField, BorderLayout.CENTER);
@@ -195,6 +202,7 @@ public class AsciiPhotoSwingApp extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         buttonPanel.add(processButton);
         buttonPanel.add(naturalSizeButton);
+        buttonPanel.add(processFolderButton);
         buttonPanel.add(stopButton);
 
         c.gridx = 0;
@@ -262,6 +270,25 @@ public class AsciiPhotoSwingApp extends JFrame {
     }
 
     /**
+     * Opens a directory chooser for batch image processing.
+     *
+     * @return selected folder wrapped in {@link java.util.Optional}, or empty
+     *         when the user cancels the dialog
+     */
+    private java.util.Optional<File> chooseFolder() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        chooser.setDialogTitle("Choose a folder of image victims");
+
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            return java.util.Optional.of(chooser.getSelectedFile());
+        }
+
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Starts media processing through the fork's Python script.
      *
      * <p>
@@ -294,14 +321,8 @@ public class AsciiPhotoSwingApp extends JFrame {
             return;
         }
 
-        int width;
-        try {
-            width = Integer.parseInt(widthField.getText().trim());
-            if (width < 1) {
-                throw new NumberFormatException("Width must be positive");
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "ASCII width must be a positive number.", "Input mischief", JOptionPane.WARNING_MESSAGE);
+        Integer width = readAsciiWidthOrShowWarning();
+        if (width == null) {
             return;
         }
 
@@ -317,59 +338,30 @@ public class AsciiPhotoSwingApp extends JFrame {
             protected Integer doInBackground() throws Exception {
                 Path forkDir = locateForkDir();
                 Path script = forkDir.resolve("ascii_media_tools.py");
-                if (!Files.exists(script)) {
-                    throw new IOException("ascii_media_tools.py was not found near the app: " + script);
-                }
+                ensurePythonScriptExists(script);
 
                 Path outputDir = forkDir.resolve("ascii_outputs");
                 Files.createDirectories(outputDir);
-                String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
                 String mediaType = detectMediaType(selectedFile);
-                outputPath = outputDir.resolve(
-                    ("video".equals(mediaType) ? "video_ascii_" : "photo_ascii_")
-                        + stamp
-                        + ("video".equals(mediaType) ? ".mp4" : ".png")
-                );
+                outputPath = createMediaOutputPath(outputDir, mediaType);
 
-                List<String> command = new ArrayList<>();
-                command.add(findPython());
-                command.add(script.toString());
-                command.add(mediaType);
-                command.add(selectedFile.getAbsolutePath());
-                command.add("--width");
-                command.add(String.valueOf(width));
-                command.add("--color");
-                command.add("--vivid");
-                command.add("--progress");
-
+                Dimension outputSize = null;
                 if (naturalSize) {
-                    Dimension natural = readNaturalSize(forkDir, selectedFile, mediaType);
-                    command.add("--output-size");
-                    command.add(natural.width + "x" + natural.height);
-                    publish("Native size: " + natural.width + "x" + natural.height);
+                    outputSize = readNaturalSize(forkDir, selectedFile, mediaType);
+                    publish("Native size: " + outputSize.width + "x" + outputSize.height);
                 }
 
-                command.add("video".equals(mediaType) ? "--save-video" : "--save-image");
-                command.add(outputPath.toString());
-
-                publish("Command: " + String.join(" ", command));
-
-                ProcessBuilder builder = new ProcessBuilder(command);
-                builder.directory(forkDir.toFile());
-                builder.redirectErrorStream(true);
-                Process process = builder.start();
-                currentProcess = process;
-
-                try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
-                )) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        publish(line);
-                    }
-                }
-
-                int exitCode = process.waitFor();
+                int exitCode = runPythonMediaProcess(
+                        script,
+                        forkDir,
+                        selectedFile,
+                        mediaType,
+                        outputPath,
+                        width,
+                        outputSize,
+                        true,
+                        line -> publish(line)
+                );
                 if (exitCode == 0) {
                     publish("Forged artifact: " + outputPath);
                 }
@@ -392,7 +384,12 @@ public class AsciiPhotoSwingApp extends JFrame {
                 String status = "Ready";
                 try {
                     int exitCode = get();
-                    if (exitCode != 0) {
+                    if (exitCode == 0) {
+                        status = naturalSize ? "Native-size artifact forged" : "Artifact forged";
+                        log(naturalSize
+                                ? "Native-size forge completed successfully."
+                                : "Width-based forge completed successfully.");
+                    } else {
                         status = "Error";
                         log("Python exited with code: " + exitCode);
                     }
@@ -414,6 +411,183 @@ public class AsciiPhotoSwingApp extends JFrame {
     }
 
     /**
+     * Processes every supported image inside the selected folder.
+     *
+     * <p>
+     *     Each image is forged into a separate PNG artifact. The selected ASCII
+     *     width still controls character-grid density, while native image
+     *     dimensions are passed as {@code --output-size} for every file.
+     * </p>
+     *
+     * @param folder directory selected by the user
+     */
+    private void processCurrentFolder(File folder) {
+        if (currentWorker != null && !currentWorker.isDone()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The forge is already running. Stop it or let it finish its ritual.",
+                    "Already forging",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        if (folder == null || !folder.exists() || !folder.isDirectory()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "This is not a folder.",
+                    "Folder mischief",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        Integer width = readAsciiWidthOrShowWarning();
+        if (width == null) {
+            return;
+        }
+
+        log("Selected folder: " + folder.getAbsolutePath());
+
+        List<File> imgs = collectSupportedImages(folder.toPath());
+
+        if (imgs.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No supported image victims found in this folder.",
+                    "Empty hunting ground",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        log("Found " + imgs.size() + " images victims.");
+        log("Folder forge begins...");
+        setProcessingState(true, "Folder forge warming up...");
+
+        SwingWorker<Integer, String> worker = new SwingWorker<>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                Path forkDir = locateForkDir();
+                Path script = forkDir.resolve("ascii_media_tools.py");
+                ensurePythonScriptExists(script);
+
+                Path outputDir = forkDir.resolve("ascii_outputs")
+                        .resolve(
+                                "folder_" + LocalDateTime.now()
+                                        .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                        );
+
+                Files.createDirectories(outputDir);
+
+                int processed = 0;
+
+                for (File image : imgs) {
+                    if (isCancelled()) {
+                        return 1;
+                    }
+
+                    publish("Forging image victim: " + image.getName());
+
+                    Path outputPath = outputDir.resolve(stripExtension(image.getName()) + "_ascii.png");
+                    Dimension natural = readNaturalSize(forkDir, image, "image");
+                    publish("Native size for " + image.getName() + ": " + natural.width + "x" + natural.height);
+
+                    int exitCode = runPythonMediaProcess(
+                            script,
+                            forkDir,
+                            image,
+                            "image",
+                            outputPath,
+                            width,
+                            natural,
+                            false,
+                            line -> publish(line)
+                    );
+
+                    if (exitCode == 0) {
+                        processed++;
+                        publish("Forged artifact: " + outputPath);
+                    } else {
+                        publish("Failed victim: " + image.getName() + " / exit code: " + exitCode);
+                    }
+
+                    int percent = (int) Math.round(processed * 100.0 / imgs.size());
+                    publish("BATCH_PROGRESS " + processed + " " + imgs.size() + " " + percent);
+                }
+
+                publish("Folder forge completed: " + outputDir);
+                return 0;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String chunk : chunks) {
+                    if (!handleProgressLine(chunk)) {
+                        log(chunk);
+                    }
+                }
+            }
+
+            @Override
+            protected void done() {
+                currentProcess = null;
+                currentWorker = null;
+                String status = "Ready";
+                try {
+                    int exitCode = get();
+                    if (exitCode == 0) {
+                        status = "Folder forged";
+                        log("Folder forge completed successfully.");
+                    } else {
+                        status = "Stopped";
+                        log("Folder forge stopped before all victims were processed.");
+                    }
+                } catch (CancellationException ex) {
+                    status = "Stopped";
+                    log("Folder forge was stopped.");
+                } catch (Exception ex) {
+                    status = "Error";
+                    log("Error: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(AsciiPhotoSwingApp.this, ex.getMessage(), "Something went sideways", JOptionPane.ERROR_MESSAGE);
+                } finally {
+                    setProcessingState(false, status);
+                }
+            }
+        };
+
+        currentWorker = worker;
+        worker.execute();
+    }
+
+    /**
+     * Collects supported image files from a directory.
+     *
+     * <p>
+     *     Streams are used only for discovery and filtering. The actual forging is
+     *     done sequentially in a {@link SwingWorker}, because external process
+     *     handling is easier to log, cancel, and reason about as a plain loop.
+     * </p>
+     *
+     * @param directory directory to inspect
+     * @return list of supported image files, or an empty list if the directory
+     *         cannot be read
+     */
+    private List<File> collectSupportedImages(Path directory) {
+        try (java.util.stream.Stream<Path> paths =
+                Files.list(directory)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(ImageExtensionsConstants::isSupportedImagePath)
+                    .map(Path::toFile)
+                    .toList();
+        } catch (IOException ioe) {
+            log("Could not read folder: " + ioe.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * Switches the GUI between idle and processing modes.
      *
      * @param active {@code true} while conversion is running
@@ -422,6 +596,7 @@ public class AsciiPhotoSwingApp extends JFrame {
     private void setProcessingState(boolean active, String status) {
         processButton.setEnabled(!active);
         naturalSizeButton.setEnabled(!active);
+        processFolderButton.setEnabled(!active);
         stopButton.setEnabled(active);
         progressBar.setIndeterminate(active);
         if (active) {
@@ -476,10 +651,23 @@ public class AsciiPhotoSwingApp extends JFrame {
      *         be printed as a regular log message
      */
     private boolean handleProgressLine(String line) {
+        if (line.startsWith("BATCH_PROGRESS ")) {
+            return handleProgressLine(line, "files");
+        }
         if (!line.startsWith("PROGRESS ")) {
             return false;
         }
+        return handleProgressLine(line, "frames");
+    }
 
+    /**
+     * Parses a progress line and displays it with a custom unit name.
+     *
+     * @param line progress protocol line
+     * @param unitName visible unit name, for example {@code frames} or {@code files}
+     * @return {@code true} after the line is consumed as progress data
+     */
+    private boolean handleProgressLine(String line, String unitName) {
         String[] parts = line.trim().split("\\s+");
         if (parts.length != 4) {
             return true;
@@ -493,10 +681,10 @@ public class AsciiPhotoSwingApp extends JFrame {
             if (total > 0 && percent >= 0) {
                 progressBar.setIndeterminate(false);
                 progressBar.setValue(Math.max(0, Math.min(100, percent)));
-                progressBar.setString(current + " / " + total + " frames (" + percent + "%)");
+                progressBar.setString(current + " / " + total + " " + unitName + " (" + percent + "%)");
             } else {
                 progressBar.setIndeterminate(true);
-                progressBar.setString("Frame " + current);
+                progressBar.setString(("files".equals(unitName) ? "File " : "Frame ") + current);
             }
         } catch (NumberFormatException ex) {
             progressBar.setIndeterminate(true);
@@ -513,14 +701,11 @@ public class AsciiPhotoSwingApp extends JFrame {
      * @throws IOException if the file extension is not supported
      */
     private String detectMediaType(File file) throws IOException {
-        String name = file.getName().toLowerCase();
-        if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png")
-            || name.endsWith(".bmp") || name.endsWith(".webp") || name.endsWith(".tif")
-            || name.endsWith(".tiff")) {
+        Path path = file.toPath();
+        if (ImageExtensionsConstants.isSupportedImagePath(path)) {
             return "image";
         }
-        if (name.endsWith(".mp4") || name.endsWith(".avi") || name.endsWith(".mkv")
-            || name.endsWith(".mov") || name.endsWith(".webm")) {
+        if (VideoExtensionsConstants.isSupportedVideoPath(path)) {
             return "video";
         }
         throw new IOException("Unsupported file format: " + file.getName());
@@ -646,6 +831,179 @@ public class AsciiPhotoSwingApp extends JFrame {
         } catch (URISyntaxException | IllegalArgumentException ex) {
             return null;
         }
+    }
+
+    /**
+     * Reads and validates the ASCII width field.
+     *
+     * @return positive ASCII width, or {@code null} when validation fails
+     */
+    private Integer readAsciiWidthOrShowWarning() {
+        try {
+            int width = Integer.parseInt(widthField.getText().trim());
+            if (width < 1) {
+                throw new NumberFormatException("Width must be positive");
+            }
+            return width;
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "ASCII width must be a positive number.",
+                    "Input mischief",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return null;
+        }
+    }
+
+    /**
+     * Verifies that the Python converter script exists before launching it.
+     *
+     * @param script expected path to {@code ascii_media_tools.py}
+     * @throws IOException if the script cannot be found
+     */
+    private void ensurePythonScriptExists(Path script) throws IOException {
+        if (!Files.exists(script)) {
+            throw new IOException("ascii_media_tools.py was not found near the app: " + script);
+        }
+    }
+
+    /**
+     * Creates a timestamped output path for one converted media file.
+     *
+     * @param outputDir output directory
+     * @param mediaType Python CLI media type: {@code image} or {@code video}
+     * @return generated artifact path with the proper file extension
+     */
+    private Path createMediaOutputPath(Path outputDir, String mediaType) {
+        String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        return outputDir.resolve(
+                ("video".equals(mediaType) ? "video_ascii_" : "photo_ascii_")
+                        + stamp
+                        + ("video".equals(mediaType) ? ".mp4" : ".png")
+        );
+    }
+
+    /**
+     * Runs {@code ascii_media_tools.py} as an external Python process.
+     *
+     * <p>
+     *     This is the shared process bridge for single-file and folder workflows.
+     *     It builds the command, starts Python, stores the active process for the
+     *     stop button, and forwards stdout lines into the supplied callback.
+     * </p>
+     *
+     * @param script path to the Python converter script
+     * @param forkDir working directory for the Python process
+     * @param inputFile source photo or video
+     * @param mediaType Python CLI media type: {@code image} or {@code video}
+     * @param outputPath generated artifact path
+     * @param width ASCII grid width in characters
+     * @param outputSize optional final pixel size for rendered output
+     * @param pythonProgress whether to request Python {@code PROGRESS} lines
+     * @param output callback receiving process output lines
+     * @return Python process exit code
+     * @throws IOException if the process cannot be started or read
+     * @throws InterruptedException if waiting for Python is interrupted
+     */
+    private int runPythonMediaProcess(
+            Path script,
+            Path forkDir,
+            File inputFile,
+            String mediaType,
+            Path outputPath,
+            int width,
+            Dimension outputSize,
+            boolean pythonProgress,
+            Consumer<String> output
+    ) throws IOException, InterruptedException {
+        List<String> command = buildPythonMediaCommand(
+                script,
+                inputFile,
+                mediaType,
+                outputPath,
+                width,
+                outputSize,
+                pythonProgress
+        );
+
+        output.accept("Command: " + String.join(" ", command));
+
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(forkDir.toFile());
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        currentProcess = process;
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+        )) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.accept(line);
+            }
+        }
+
+        return process.waitFor();
+    }
+
+    /**
+     * Builds the command line for the Python media converter.
+     *
+     * @param script path to {@code ascii_media_tools.py}
+     * @param inputFile source photo or video
+     * @param mediaType Python CLI media type: {@code image} or {@code video}
+     * @param outputPath generated artifact path
+     * @param width ASCII grid width in characters
+     * @param outputSize optional final pixel size for rendered output
+     * @param pythonProgress whether to include {@code --progress}
+     * @return command list suitable for {@link ProcessBuilder}
+     */
+    private List<String> buildPythonMediaCommand(
+            Path script,
+            File inputFile,
+            String mediaType,
+            Path outputPath,
+            int width,
+            Dimension outputSize,
+            boolean pythonProgress
+    ) {
+        List<String> command = new ArrayList<>();
+        command.add(findPython());
+        command.add(script.toString());
+        command.add(mediaType);
+        command.add(inputFile.getAbsolutePath());
+        command.add("--width");
+        command.add(String.valueOf(width));
+        command.add("--color");
+        command.add("--vivid");
+
+        if (pythonProgress) {
+            command.add("--progress");
+        }
+
+        if (outputSize != null) {
+            command.add("--output-size");
+            command.add(outputSize.width + "x" + outputSize.height);
+        }
+
+        command.add("video".equals(mediaType) ? "--save-video" : "--save-image");
+        command.add(outputPath.toString());
+        return command;
+    }
+
+    /**
+     * Removes the final extension from a file name.
+     *
+     * @param fileName source file name
+     * @return file name without its last extension
+     */
+    private String stripExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex < 1) {
+            return fileName;
+        }
+        return fileName.substring(0, dotIndex);
     }
 
 

@@ -16,7 +16,12 @@ Get-ChildItem -Path $classesDir -Recurse -File -ErrorAction SilentlyContinue | R
 Get-ChildItem -Path $packageDir -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 New-Item -ItemType Directory -Force -Path (Join-Path $packageDir "META-INF") | Out-Null
 
-javac -encoding UTF-8 -d $classesDir (Join-Path $srcDir "AsciiPhotoSwingApp.java")
+$javaSources = Get-ChildItem -Path $srcDir -Recurse -Filter "*.java" | ForEach-Object { $_.FullName }
+if (-not $javaSources) {
+    throw "No Java source files found in $srcDir"
+}
+
+javac -encoding UTF-8 -d $classesDir $javaSources
 
 Copy-Item -Path (Join-Path $classesDir "*") -Destination $packageDir -Recurse -Force
 Set-Content -Path (Join-Path $packageDir "META-INF\MANIFEST.MF") -Encoding ASCII -Value @(
